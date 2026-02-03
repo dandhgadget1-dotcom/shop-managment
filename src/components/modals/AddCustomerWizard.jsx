@@ -77,6 +77,7 @@ export default function AddCustomerWizard({ open, onOpenChange }) {
     name: "",
     model: "",
     imeiNo: "",
+    imeiNo2: "",
     price: "",
   });
 
@@ -104,6 +105,7 @@ export default function AddCustomerWizard({ open, onOpenChange }) {
         name: "",
         model: "",
         imeiNo: "",
+        imeiNo2: "",
         price: "",
       });
       setIdFrontPreview(null);
@@ -794,14 +796,25 @@ export default function AddCustomerWizard({ open, onOpenChange }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imeiNo">IMEI Number</Label>
+                <Label htmlFor="imeiNo">IMEI Number 1</Label>
                 <Input
                   id="imeiNo"
                   name="imeiNo"
                   value={phoneData.imeiNo}
                   onChange={handlePhoneInputChange}
-                  placeholder="Enter IMEI number"
+                  placeholder="Enter first IMEI number"
                   required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="imeiNo2">IMEI Number 2</Label>
+                <Input
+                  id="imeiNo2"
+                  name="imeiNo2"
+                  value={phoneData.imeiNo2}
+                  onChange={handlePhoneInputChange}
+                  placeholder="Enter second IMEI number (optional)"
                 />
               </div>
 

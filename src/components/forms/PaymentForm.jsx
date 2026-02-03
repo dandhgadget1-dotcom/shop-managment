@@ -43,12 +43,16 @@ export default function PaymentForm({ phonePrice = 0 }) {
       formData.numberOfInstallments
     ) {
       const remaining = parseFloat(formData.remainingAmount);
+      const downPayment = parseFloat(formData.downPayment) || 0;
       const percentage = parseFloat(formData.percentage);
       const installments = parseInt(formData.numberOfInstallments);
 
-      if (remaining > 0 && percentage >= 0 && installments > 0) {
-        const interestAmount = (remaining * percentage) / 100;
-        const totalWithInterest = remaining + interestAmount;
+      if (phonePrice > 0 && percentage >= 0 && installments > 0) {
+        // If down payment is 0, apply interest to full phone price
+        // Otherwise, apply interest to remaining amount
+        const baseAmount = downPayment === 0 ? phonePrice : remaining;
+        const interestAmount = (baseAmount * percentage) / 100;
+        const totalWithInterest = baseAmount + interestAmount;
         const installmentAmount = totalWithInterest / installments;
 
         setCalculatedAmount({
@@ -57,7 +61,7 @@ export default function PaymentForm({ phonePrice = 0 }) {
         });
       }
     }
-  }, [formData.remainingAmount, formData.percentage, formData.numberOfInstallments, paymentType]);
+  }, [formData.remainingAmount, formData.downPayment, formData.percentage, formData.numberOfInstallments, paymentType, phonePrice]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

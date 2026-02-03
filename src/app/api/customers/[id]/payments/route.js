@@ -45,9 +45,17 @@ export async function POST(request, { params }) {
 
     const customer = transformCustomer(customerData);
 
-    if (!customer.payment || customer.payment.paymentType !== 'installment') {
+    if (!customer.payment) {
       return NextResponse.json(
-        { message: 'Customer does not have an installment payment plan' },
+        { message: 'Customer does not have a payment plan' },
+        { status: 400 }
+      );
+    }
+
+    // Allow payments for installment, direct, and partial payment types
+    if (customer.payment.paymentType !== 'installment' && customer.payment.paymentType !== 'direct' && customer.payment.paymentType !== 'partial') {
+      return NextResponse.json(
+        { message: 'Invalid payment type' },
         { status: 400 }
       );
     }
@@ -63,7 +71,19 @@ export async function POST(request, { params }) {
     }
 
     // Validate payment amount doesn't exceed remaining balance
-    const totalAmount = parseFloat(customer.payment.calculatedAmount?.totalWithInterest || 0);
+    let totalAmount;
+    if (customer.payment.paymentType === 'installment') {
+      totalAmount = parseFloat(customer.payment.calculatedAmount?.totalWithInterest || 0);
+    } else if (customer.payment.paymentType === 'direct' || customer.payment.paymentType === 'partial') {
+      // For direct and partial payments, use phone price as total amount
+      totalAmount = parseFloat(customer.phone?.price || 0);
+    } else {
+      return NextResponse.json(
+        { message: 'Invalid payment type' },
+        { status: 400 }
+      );
+    }
+    
     const currentTotalPaid = (customer.payment.payments || []).reduce((sum, p) => {
       return sum + (parseFloat(p.amount) || 0);
     }, 0);

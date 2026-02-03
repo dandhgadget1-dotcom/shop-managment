@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,8 +29,10 @@ import {
   Percent,
   Calendar,
   Loader2,
+  Plus,
+  Trash2,
 } from "lucide-react";
-import { formatPakistanPhone, formatIdNumber } from "@/lib/utils";
+import { formatPakistanPhone, formatIdNumber, formatCurrency } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useShop } from "@/context/ShopContext";
@@ -111,6 +113,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
     name: "",
     model: "",
     imeiNo: "",
+    imeiNo2: "",
     price: "",
   });
 
@@ -127,6 +130,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
     totalWithInterest: 0,
     installmentAmount: 0,
   });
+  const [partialPaymentAmount, setPartialPaymentAmount] = useState("");
 
   // Load data when editing
   useEffect(() => {
@@ -169,6 +173,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
             name: customer.phone.name || "",
             model: customer.phone.model || "",
             imeiNo: customer.phone.imeiNo || "",
+            imeiNo2: customer.phone.imeiNo2 || "",
             price: customer.phone.price || "",
           });
         }
@@ -201,6 +206,13 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
           if (customer.payment.calculatedAmount) {
             setCalculatedAmount(customer.payment.calculatedAmount);
           }
+          // Load initial payment for partial type
+          if (customer.payment.paymentType === "partial" && customer.payment.payments && customer.payment.payments.length > 0) {
+            const initialPayment = customer.payment.payments[0];
+            setPartialPaymentAmount(initialPayment.amount || "");
+          } else {
+            setPartialPaymentAmount("");
+          }
         }
       }
     } else if (!open) {
@@ -225,6 +237,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
         name: "",
         model: "",
         imeiNo: "",
+        imeiNo2: "",
         price: "",
       });
       setIdFrontPreview(null);
@@ -241,6 +254,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
       setSpIdBackLoading(false);
       setIsSaving(false);
       setPaymentType("direct");
+      setPartialPaymentAmount("");
       setPaymentData({
         downPayment: "",
         remainingAmount: "",
@@ -493,12 +507,16 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
       paymentData.numberOfInstallments
     ) {
       const remaining = Math.round(parseFloat(paymentData.remainingAmount) || 0);
+      const downPayment = Math.round(parseFloat(paymentData.downPayment) || 0);
       const percentage = parseFloat(paymentData.percentage) || 0;
       const installments = parseInt(paymentData.numberOfInstallments) || 0;
 
-      if (remaining > 0 && percentage >= 0 && installments > 0) {
-        const interestAmount = Math.round((remaining * percentage) / 100);
-        const totalWithInterest = Math.round(remaining + interestAmount);
+      if (phonePrice > 0 && percentage >= 0 && installments > 0) {
+        // If down payment is 0, apply interest to full phone price
+        // Otherwise, apply interest to remaining amount
+        const baseAmount = downPayment === 0 ? phonePrice : remaining;
+        const interestAmount = Math.round((baseAmount * percentage) / 100);
+        const totalWithInterest = Math.round(baseAmount + interestAmount);
         const installmentAmount = Math.ceil(totalWithInterest / installments); // Round up
 
         setCalculatedAmount({
@@ -517,7 +535,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
         installmentAmount: 0,
       });
     }
-  }, [paymentData.remainingAmount, paymentData.percentage, paymentData.numberOfInstallments, paymentType]);
+  }, [paymentData.remainingAmount, paymentData.downPayment, paymentData.percentage, paymentData.numberOfInstallments, paymentType, phonePrice]);
 
   const handlePaymentInputChange = (e) => {
     const { name, value } = e.target;
@@ -586,6 +604,22 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
         paymentType,
         ...(paymentType === "installment" ? paymentData : {}),
         calculatedAmount: paymentType === "installment" && calculatedAmount.installmentAmount > 0 ? calculatedAmount : null,
+        ...(paymentType === "direct" && phonePrice > 0 ? { 
+          payments: [{
+            amount: phonePrice,
+            paymentDate: new Date().toISOString(),
+            notes: "Full payment",
+            recordedAt: new Date().toISOString(),
+          }]
+        } : paymentType === "direct" ? { payments: [] } : {}),
+        ...(paymentType === "partial" && partialPaymentAmount ? { 
+          payments: [{
+            amount: parseFloat(partialPaymentAmount) || 0,
+            paymentDate: new Date().toISOString(),
+            notes: "Initial payment",
+            recordedAt: new Date().toISOString(),
+          }]
+        } : paymentType === "partial" ? { payments: [] } : {}),
       };
 
       // Prepare complete data with already uploaded Cloudinary URLs
@@ -1013,15 +1047,27 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="imeiNo" className="text-xs">IMEI Number *</Label>
+                    <Label htmlFor="imeiNo" className="text-xs">IMEI Number 1 *</Label>
                     <Input
                       id="imeiNo"
                       name="imeiNo"
                       value={phoneData.imeiNo}
                       onChange={handlePhoneInputChange}
-                      placeholder="Enter IMEI number"
+                      placeholder="Enter first IMEI number"
                       className="h-8 text-sm"
                       required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="imeiNo2" className="text-xs">IMEI Number 2</Label>
+                    <Input
+                      id="imeiNo2"
+                      name="imeiNo2"
+                      value={phoneData.imeiNo2}
+                      onChange={handlePhoneInputChange}
+                      placeholder="Enter second IMEI number (optional)"
+                      className="h-8 text-sm"
                     />
                   </div>
 
@@ -1080,7 +1126,13 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="direct" id="direct" />
                       <Label htmlFor="direct" className="cursor-pointer text-sm">
-                        Direct Purchase
+                        Direct Purchase (Full Payment)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="partial" id="partial" />
+                      <Label htmlFor="partial" className="cursor-pointer text-sm">
+                        Partial Payment
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -1091,6 +1143,53 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
                     </div>
                   </RadioGroup>
                 </div>
+
+                {paymentType === "direct" && phonePrice > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    The phone price ({formatCurrency(phonePrice)}) will be recorded as the full payment amount.
+                  </p>
+                )}
+
+                {paymentType === "partial" && phonePrice > 0 && (
+                  <>
+                    <div className="p-3 bg-muted rounded-lg space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-medium">Total Amount:</span>
+                        <span className="font-bold text-base">{formatCurrency(phonePrice)}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="partialPaymentAmount" className="text-xs font-semibold">
+                          Amount Paid (Rs.)
+                        </Label>
+                        <Input
+                          id="partialPaymentAmount"
+                          type="number"
+                          placeholder="Enter amount paid"
+                          value={partialPaymentAmount}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "" || (parseFloat(value) >= 0 && parseFloat(value) <= phonePrice)) {
+                              setPartialPaymentAmount(value);
+                            }
+                          }}
+                          min="0"
+                          max={phonePrice}
+                          step="0.01"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-sm border-t pt-2">
+                        <span className="font-medium">Remaining Amount:</span>
+                        <span className={`font-bold ${(phonePrice - (parseFloat(partialPaymentAmount) || 0)) <= 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                          {formatCurrency(Math.max(0, phonePrice - (parseFloat(partialPaymentAmount) || 0)))}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        You can record additional payments later in the Partial Payment Ledger.
+                      </p>
+                    </div>
+                  </>
+                )}
 
                 {paymentType === "installment" && (
                   <>
@@ -1105,7 +1204,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
                         type="number"
                         value={paymentData.downPayment}
                         onChange={handlePaymentInputChange}
-                        placeholder="Enter down payment amount"
+                        placeholder="Enter down payment amount (0 if none)"
                         min="0"
                         step="1"
                         className="h-8 text-sm"

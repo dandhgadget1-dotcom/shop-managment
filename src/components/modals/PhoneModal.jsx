@@ -27,6 +27,7 @@ export default function PhoneModal({ open, onOpenChange, customerId, phoneId = n
           name: phone.name || "",
           model: phone.model || "",
           imeiNo: phone.imeiNo || "",
+          imeiNo2: phone.imeiNo2 || "",
           price: phone.price || "",
         };
       }
@@ -35,6 +36,7 @@ export default function PhoneModal({ open, onOpenChange, customerId, phoneId = n
       name: "",
       model: "",
       imeiNo: "",
+      imeiNo2: "",
       price: "",
     };
   };
@@ -70,6 +72,7 @@ export default function PhoneModal({ open, onOpenChange, customerId, phoneId = n
         name: "",
         model: "",
         imeiNo: "",
+        imeiNo2: "",
         price: "",
       });
       onOpenChange(false);
@@ -86,6 +89,7 @@ export default function PhoneModal({ open, onOpenChange, customerId, phoneId = n
         name: "",
         model: "",
         imeiNo: "",
+        imeiNo2: "",
         price: "",
       });
     }
@@ -128,14 +132,25 @@ export default function PhoneModal({ open, onOpenChange, customerId, phoneId = n
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="imeiNo">IMEI Number</Label>
+            <Label htmlFor="imeiNo">IMEI Number 1</Label>
             <Input
               id="imeiNo"
               name="imeiNo"
               value={formData.imeiNo}
               onChange={handleInputChange}
-              placeholder="Enter IMEI number"
+              placeholder="Enter first IMEI number"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="imeiNo2">IMEI Number 2</Label>
+            <Input
+              id="imeiNo2"
+              name="imeiNo2"
+              value={formData.imeiNo2}
+              onChange={handleInputChange}
+              placeholder="Enter second IMEI number (optional)"
             />
           </div>
 

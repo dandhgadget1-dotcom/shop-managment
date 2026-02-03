@@ -19,8 +19,10 @@ export default function ReceiptContent({ customer, settings, paymentType, receip
   const downPayment = Math.round(parseFloat(customer.payment?.downPayment) || 0);
   const remainingAmount = Math.round(parseFloat(customer.payment?.remainingAmount) || 0);
   const interestPercentage = parseFloat(customer.payment?.percentage) || 0;
-  const interestAmount = Math.round((remainingAmount * interestPercentage) / 100);
-  const totalWithInterest = Math.round(remainingAmount + interestAmount);
+   // If down payment is 0, apply interest to full phone price, otherwise to remaining amount
+  const baseAmount = downPayment === 0 ? phonePrice : remainingAmount;
+  const interestAmount = Math.round((baseAmount * interestPercentage) / 100);
+  const totalWithInterest = Math.round(baseAmount + interestAmount);
   const numberOfInstallments = parseInt(customer.payment?.numberOfInstallments) || 0;
   const installmentAmount = numberOfInstallments > 0 ? Math.ceil(totalWithInterest / numberOfInstallments) : 0;
   const currentPaymentType = paymentType || customer.payment?.paymentType || "direct";
@@ -78,7 +80,10 @@ export default function ReceiptContent({ customer, settings, paymentType, receip
           <div className="item-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", margin: "3px 0" }}>
             <div className="item-name" style={{ flex: "1" }}>
               <div className="bold" style={{ fontWeight: "bold" }}>{customer.phone.name}</div>
-              <div style={{ fontSize: "10px" }}>{customer.phone.model} | IMEI: {customer.phone.imeiNo}</div>
+              <div style={{ fontSize: "10px" }}>
+                {customer.phone.model} | IMEI 1: {customer.phone.imeiNo}
+                {customer.phone.imeiNo2 && ` | IMEI 2: ${customer.phone.imeiNo2}`}
+              </div>
             </div>
             <div className="item-price right" style={{ textAlign: "right" }}>{formatCurrency(phonePrice)}</div>
           </div>
@@ -87,20 +92,35 @@ export default function ReceiptContent({ customer, settings, paymentType, receip
       )}
 
       {/* Payment Summary */}
-      {currentPaymentType === "direct" ? (
+      {currentPaymentType === "direct" || currentPaymentType === "partial" ? (
         <>
           <div className="total-row final" style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", margin: "4px 0", fontWeight: "bold" }}>
             <span>TOTAL:</span>
             <span>{formatCurrency(phonePrice)}</span>
           </div>
-          <div className="total-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", margin: "4px 0" }}>
-            <span>PAID:</span>
-            <span className="bold" style={{ fontWeight: "bold" }}>{formatCurrency(phonePrice)}</span>
-          </div>
-          <div className="total-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", margin: "4px 0" }}>
-            <span>BALANCE:</span>
-            <span>{formatCurrency(0)}</span>
-          </div>
+          {(() => {
+            const payments = customer.payment?.payments || [];
+            const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+            const balance = Math.max(0, phonePrice - totalPaid);
+            return (
+              <>
+                {payments.length > 0 && payments.map((payment, index) => (
+                  <div key={index} className="total-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", margin: "2px 0" }}>
+                    <span>Payment {index + 1} ({new Date(payment.paymentDate).toLocaleDateString()}):</span>
+                    <span>{formatCurrency(parseFloat(payment.amount) || 0)}</span>
+                  </div>
+                ))}
+                <div className="total-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", margin: "4px 0" }}>
+                  <span>PAID:</span>
+                  <span className="bold" style={{ fontWeight: "bold" }}>{formatCurrency(totalPaid)}</span>
+                </div>
+                <div className="total-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", margin: "4px 0" }}>
+                  <span>BALANCE:</span>
+                  <span>{formatCurrency(balance)}</span>
+                </div>
+              </>
+            );
+          })()}
         </>
       ) : (
         <>

@@ -1074,10 +1074,18 @@ export default function InstallmentsLedger({ customerId, onClose }) {
                         <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">IMEI</p>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <p className="font-semibold font-mono text-xs truncate text-foreground bg-muted/50 p-1 rounded-md">{customer.phone.imeiNo}</p>
+                            <p className="font-semibold font-mono text-xs truncate text-foreground bg-muted/50 p-1 rounded-md">
+                              {customer.phone.imeiNo}
+                              {customer.phone.imeiNo2 && ` / ${customer.phone.imeiNo2}`}
+                            </p>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="font-mono">{customer.phone.imeiNo}</p>
+                            <div className="space-y-1">
+                              <p className="font-mono">IMEI 1: {customer.phone.imeiNo}</p>
+                              {customer.phone.imeiNo2 && (
+                                <p className="font-mono">IMEI 2: {customer.phone.imeiNo2}</p>
+                              )}
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       </div>
