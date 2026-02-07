@@ -4,6 +4,7 @@ import { ShopProvider } from "@/context/ShopContext";
 import { ToastProvider } from "@/components/ui/toast";
 import { ShopSettingsProvider } from "@/context/ShopSettingsContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import PinProtection from "@/components/PinProtection";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,13 +27,15 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          <ShopProvider>
-            <ShopSettingsProvider>
-              <ToastProvider>{children}</ToastProvider>
-            </ShopSettingsProvider>
-          </ShopProvider>
-        </ThemeProvider>
+        <PinProtection>
+          <ThemeProvider>
+            <ShopProvider>
+              <ShopSettingsProvider>
+                <ToastProvider>{children}</ToastProvider>
+              </ShopSettingsProvider>
+            </ShopProvider>
+          </ThemeProvider>
+        </PinProtection>
       </body>
     </html>
   );
