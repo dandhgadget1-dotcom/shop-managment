@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase';
+import { syncShop } from '@/lib/dbSync';
 
 // Helper function to transform shop data
 function transformShop(shop) {
@@ -15,6 +16,7 @@ function transformShop(shop) {
     enableAutoReminders: shop.enable_auto_reminders,
     enableManualReminders: shop.enable_manual_reminders,
     reminderDaysAhead: shop.reminder_days_ahead,
+    reminderMessageTemplate: shop.reminder_message_template || null,
     createdAt: shop.created_at,
     updatedAt: shop.updated_at,
   };
@@ -43,6 +45,7 @@ export async function GET() {
         enableAutoReminders: false,
         enableManualReminders: true,
         reminderDaysAhead: 7,
+        reminderMessageTemplate: null,
       });
     }
     
@@ -72,6 +75,7 @@ export async function PUT(request) {
       enable_auto_reminders: body.enableAutoReminders,
       enable_manual_reminders: body.enableManualReminders,
       reminder_days_ahead: body.reminderDaysAhead,
+      reminder_message_template: body.reminderMessageTemplate || null,
     };
 
     // Check if shop settings exist
@@ -104,6 +108,11 @@ export async function PUT(request) {
       if (updateError) throw updateError;
       shop = updatedShop;
     }
+
+    // Sync to MongoDB (fire and forget - don't wait for it)
+    syncShop(shop, existingShops && existingShops.length > 0 ? 'update' : 'create').catch(err => {
+      console.error('[PUT /api/shop] MongoDB sync error:', err);
+    });
     
     return NextResponse.json(transformShop(shop));
   } catch (error) {

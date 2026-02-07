@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase';
+import { syncCustomer } from '@/lib/dbSync';
 
 // Helper function to transform customer data
 function transformCustomer(customer) {
@@ -113,6 +114,11 @@ export async function PUT(request, { params }) {
 
     if (updateError) throw updateError;
 
+    // Sync to MongoDB (fire and forget - don't wait for it)
+    syncCustomer(updatedCustomer, 'update').catch(err => {
+      console.error('[PUT /api/customers/:id/payments/:paymentId] MongoDB sync error:', err);
+    });
+
     return NextResponse.json(transformCustomer(updatedCustomer));
   } catch (error) {
     return NextResponse.json(
@@ -164,6 +170,11 @@ export async function DELETE(request, { params }) {
       .single();
 
     if (updateError) throw updateError;
+
+    // Sync to MongoDB (fire and forget - don't wait for it)
+    syncCustomer(updatedCustomer, 'update').catch(err => {
+      console.error('[DELETE /api/customers/:id/payments/:paymentId] MongoDB sync error:', err);
+    });
 
     return NextResponse.json(transformCustomer(updatedCustomer));
   } catch (error) {

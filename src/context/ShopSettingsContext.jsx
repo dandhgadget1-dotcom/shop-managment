@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   enableAutoReminders: false,
   enableManualReminders: true,
   reminderDaysAhead: 7,
+  reminderMessageTemplate: null,
 };
 
 export function ShopSettingsProvider({ children }) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase';
+import { syncCustomer } from '@/lib/dbSync';
 
 // GET /api/customers - Get all customers
 export async function GET() {
@@ -73,6 +74,11 @@ export async function POST(request) {
       .single();
 
     if (error) throw error;
+
+    // Sync to MongoDB (fire and forget - don't wait for it)
+    syncCustomer(savedCustomer, 'create').catch(err => {
+      console.error('[POST /api/customers] MongoDB sync error:', err);
+    });
 
     // Transform response to match frontend expectations (only camelCase, no snake_case)
     const transformedCustomer = {

@@ -371,6 +371,7 @@ export default function ShopSettingsModal({ open, onOpenChange }) {
                   </div>
                 </div>
               </div>
+
             </div>
           </div>
 

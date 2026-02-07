@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useShop } from "@/context/ShopContext";
 import { useShopSettings } from "@/context/ShopSettingsContext";
-import { smsAPI } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
+import { generateReminderMessage } from "@/lib/reminderMessages";
 import {
   Calendar,
   DollarSign,
@@ -32,6 +32,9 @@ import {
   RotateCcw,
   MoreVertical,
   MessageSquare,
+  Copy,
+  Check,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -58,8 +61,6 @@ export default function InstallmentsLedger({ customerId, onClose }) {
   const customer = getCustomerById(customerId);
   const toast = useToast();
   
-  // Check if manual reminders are enabled
-  const manualRemindersEnabled = settings?.enableManualReminders ?? true;
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedInstallment, setSelectedInstallment] = useState(null);
   const [isEditingPayment, setIsEditingPayment] = useState(false);
@@ -70,8 +71,8 @@ export default function InstallmentsLedger({ customerId, onClose }) {
     amount: "",
     notes: "",
   });
-  const [sendingReminder, setSendingReminder] = useState(false);
   const [allowFlexiblePayment, setAllowFlexiblePayment] = useState(false);
+  const [copiedInstallmentNumber, setCopiedInstallmentNumber] = useState(null);
 
   // Smart payment allocation algorithm
   const allocatePayments = useMemo(() => {
@@ -242,21 +243,135 @@ export default function InstallmentsLedger({ customerId, onClose }) {
     setReverseConfirmOpen(true);
   };
 
-  const handleSendReminder = async (installment) => {
-    if (!customer.contactInfo) {
+  // Format phone number for WhatsApp (wa.me format: 923001234567, no +)
+  const formatPhoneForWhatsApp = (phoneNumber) => {
+    if (!phoneNumber) return null;
+    
+    // Remove all non-digit characters
+    let cleaned = phoneNumber.replace(/[^\d]/g, '');
+    
+    // If it starts with +92, remove the +
+    if (cleaned.startsWith('92') && cleaned.length === 12) {
+      return cleaned;
+    }
+    
+    // If it starts with 0, replace with 92
+    if (cleaned.startsWith('0') && cleaned.length === 11) {
+      return '92' + cleaned.substring(1);
+    }
+    
+    // If it's 10 digits, add 92
+    if (cleaned.length === 10) {
+      return '92' + cleaned;
+    }
+    
+    // If it's already 12 digits starting with 92, return as is
+    if (cleaned.length === 12 && cleaned.startsWith('92')) {
+      return cleaned;
+    }
+    
+    return null;
+  };
+
+  const getReminderMessage = (installment) => {
+    if (!customer || !customer.contactInfo) {
+      return null;
+    }
+
+    // Get shop settings for message generation
+    const shopInfo = {
+      shopName: settings?.shopName || 'Our Shop',
+      shopPhone: settings?.shopPhone || '',
+      reminderMessageTemplate: settings?.reminderMessageTemplate || null,
+    };
+
+    // Create reminder data structure
+    const reminderData = {
+      customerName: customer.fullName,
+      phoneName: customer.phone?.name || 'N/A',
+      customerId: customer.id,
+    };
+
+    const installmentData = {
+      number: installment.number,
+      dueDate: installment.date.toISOString(),
+      amount: installment.requiredAmount,
+    };
+
+    // Check for custom message in localStorage
+    const reminderKey = `${customer.id}-${installment.number}`;
+    let message;
+    try {
+      const storedCustomMessages = localStorage.getItem('customReminderMessages');
+      if (storedCustomMessages) {
+        const customMessages = JSON.parse(storedCustomMessages);
+        if (customMessages[reminderKey]) {
+          message = customMessages[reminderKey];
+        }
+      }
+    } catch (error) {
+      console.error('Error loading custom message:', error);
+    }
+
+    // If no custom message, generate default
+    if (!message) {
+      message = generateReminderMessage(reminderData, installmentData, shopInfo);
+    }
+
+    return message;
+  };
+
+  const handleCopyReminderMessage = async (installment) => {
+    if (!customer || !customer.contactInfo) {
       toast.error("Customer does not have contact information.");
       return;
     }
 
     try {
-      setSendingReminder(true);
-      const result = await smsAPI.sendReminder(customerId, installment.number);
-      toast.success(result.message || `WhatsApp reminder sent successfully for installment #${installment.number}!`);
+      const message = getReminderMessage(installment);
+      if (!message) {
+        toast.error("Failed to generate reminder message.");
+        return;
+      }
+
+      await navigator.clipboard.writeText(message);
+      
+      setCopiedInstallmentNumber(installment.number);
+      toast.success(`Reminder message for installment #${installment.number} copied to clipboard!`);
+      
+      setTimeout(() => {
+        setCopiedInstallmentNumber(null);
+      }, 2000);
     } catch (error) {
-      toast.error(error.message || "Failed to send WhatsApp reminder. Please check your Twilio configuration.");
-    } finally {
-      setSendingReminder(false);
+      console.error("Error copying reminder message:", error);
+      toast.error("Failed to copy reminder message");
     }
+  };
+
+  const handleOpenWhatsApp = (installment) => {
+    if (!customer || !customer.contactInfo) {
+      toast.error("Customer does not have contact information.");
+      return;
+    }
+
+    const phoneNumber = formatPhoneForWhatsApp(customer.contactInfo);
+    
+    if (!phoneNumber) {
+      toast.error("Invalid phone number format");
+      return;
+    }
+    
+    const message = getReminderMessage(installment);
+    if (!message) {
+      toast.error("Failed to generate reminder message.");
+      return;
+    }
+    
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, '_blank');
+    toast.success("Opening WhatsApp...");
   };
 
   // Calculate how payment will be allocated
@@ -859,13 +974,38 @@ export default function InstallmentsLedger({ customerId, onClose }) {
                                       </div>
                                       <DropdownMenuSeparator />
                                       {installment.remainingAmount > 0 && (
-                                        <DropdownMenuItem
-                                          onClick={() => handleRecordPayment(installment)}
-                                          className="cursor-pointer"
-                                        >
-                                          <Plus className="h-4 w-4 mr-2" />
-                                          Add Payment
-                                        </DropdownMenuItem>
+                                        <>
+                                          <DropdownMenuItem
+                                            onClick={() => handleRecordPayment(installment)}
+                                            className="cursor-pointer"
+                                          >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Payment
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleCopyReminderMessage(installment)}
+                                            className="cursor-pointer"
+                                          >
+                                            {copiedInstallmentNumber === installment.number ? (
+                                              <>
+                                                <Check className="h-4 w-4 mr-2" />
+                                                Message Copied!
+                                              </>
+                                            ) : (
+                                              <>
+                                                <MessageSquare className="h-4 w-4 mr-2" />
+                                                Copy Reminder Message
+                                              </>
+                                            )}
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleOpenWhatsApp(installment)}
+                                            className="cursor-pointer"
+                                          >
+                                            <MessageCircle className="h-4 w-4 mr-2" />
+                                            Send via WhatsApp
+                                          </DropdownMenuItem>
+                                        </>
                                       )}
                                       {installment.paymentRecords.length > 0 && installment.paymentRecords.map((paymentRecord, idx) => (
                                         <div key={idx}>
@@ -898,17 +1038,31 @@ export default function InstallmentsLedger({ customerId, onClose }) {
                                       <Plus className="h-3 w-3 mr-1" />
                                       Record Payment
                                     </Button>
-                                    {customer.contactInfo && manualRemindersEnabled && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleSendReminder(installment)}
-                                        disabled={sendingReminder}
-                                        className="h-7 px-2 text-xs"
-                                        title="Send WhatsApp reminder"
-                                      >
-                                        <MessageSquare className="h-3 w-3" />
-                                      </Button>
+                                    {customer.contactInfo && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleCopyReminderMessage(installment)}
+                                          className="h-7 px-2 text-xs"
+                                          title="Copy reminder message"
+                                        >
+                                          {copiedInstallmentNumber === installment.number ? (
+                                            <Check className="h-3 w-3" />
+                                          ) : (
+                                            <MessageSquare className="h-3 w-3" />
+                                          )}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleOpenWhatsApp(installment)}
+                                          className="h-7 px-2 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-950/20 dark:hover:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+                                          title="Send via WhatsApp"
+                                        >
+                                          <MessageCircle className="h-3 w-3" />
+                                        </Button>
+                                      </>
                                     )}
                                   </div>
                                 )}

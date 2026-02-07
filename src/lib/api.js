@@ -236,3 +236,15 @@ export const smsAPI = {
   },
 };
 
+// Reminders API functions
+export const remindersAPI = {
+  // Get all reminders (customers with pending installments due today or within 10 days)
+  getAll: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reminders`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleFetchError(error, `${API_BASE_URL}/reminders`);
+    }
+  },
+};

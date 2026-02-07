@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase';
+import { syncCustomer } from '@/lib/dbSync';
 
 // Helper function to transform customer data
 function transformCustomer(customer) {
@@ -143,6 +144,11 @@ export async function POST(request, { params }) {
       .single();
 
     if (updateError) throw updateError;
+
+    // Sync to MongoDB (fire and forget - don't wait for it)
+    syncCustomer(updatedCustomer, 'update').catch(err => {
+      console.error('[POST /api/customers/:id/payments] MongoDB sync error:', err);
+    });
 
     return NextResponse.json(transformCustomer(updatedCustomer));
   } catch (error) {

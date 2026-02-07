@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase';
 import { deleteImage } from '@/lib/cloudinary';
+import { syncCustomer, syncCustomerDelete } from '@/lib/dbSync';
 
 // Helper function to transform customer data (only camelCase, no snake_case)
 function transformCustomer(customer) {
@@ -195,6 +196,11 @@ export async function PUT(request, { params }) {
 
     if (updateError) throw updateError;
 
+    // Sync to MongoDB (fire and forget - don't wait for it)
+    syncCustomer(updatedCustomer, 'update').catch(err => {
+      console.error('[PUT /api/customers/:id] MongoDB sync error:', err);
+    });
+
     return NextResponse.json(transformCustomer(updatedCustomer));
   } catch (error) {
     if (error.code === '23505') {
@@ -258,6 +264,11 @@ export async function DELETE(request, { params }) {
       .eq('id', id);
 
     if (deleteError) throw deleteError;
+
+    // Sync deletion to MongoDB (fire and forget - don't wait for it)
+    syncCustomerDelete(id).catch(err => {
+      console.error('[DELETE /api/customers/:id] MongoDB sync error:', err);
+    });
 
     return NextResponse.json({ message: 'Customer deleted successfully' });
   } catch (error) {

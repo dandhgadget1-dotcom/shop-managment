@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Edit, Trash2, CreditCard, FileText, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, TrendingUp, Clock, Users, BarChart3, FolderOpen, Printer, Settings, Plus, Loader2 } from "lucide-react";
+import { MoreVertical, Edit, Trash2, CreditCard, FileText, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, TrendingUp, Clock, Users, BarChart3, FolderOpen, Printer, Settings, Plus, Loader2, MessageSquare } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
 import { useShop } from "@/context/ShopContext";
@@ -29,6 +29,7 @@ import PartialPaymentLedger from "./PartialPaymentLedger";
 import DocumentsViewModal from "./modals/DocumentsViewModal";
 import Receipt from "./receipt/Receipt";
 import ShopSettingsModal from "./settings/ShopSettingsModal";
+import ReminderTemplateEditor from "./settings/ReminderTemplateEditor";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   Dialog,
@@ -57,6 +58,7 @@ export default function CustomersTable() {
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [receiptCustomer, setReceiptCustomer] = useState(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
 
   const handleEdit = (id, section = null) => {
     setEditingCustomerId(id);
@@ -398,6 +400,16 @@ export default function CustomersTable() {
             <span className="sm:hidden">Add</span>
           </Button>
           <ThemeToggle />
+          <Button
+            variant="outline"
+            onClick={() => setTemplateEditorOpen(true)}
+            className="shrink-0"
+            size="sm"
+            title="Edit Reminder Template"
+          >
+            <MessageSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Template</span>
+          </Button>
           <Button
             variant="outline"
             onClick={() => setSettingsModalOpen(true)}
@@ -969,6 +981,11 @@ export default function CustomersTable() {
       <ShopSettingsModal
         open={settingsModalOpen}
         onOpenChange={setSettingsModalOpen}
+      />
+
+      <ReminderTemplateEditor
+        open={templateEditorOpen}
+        onOpenChange={setTemplateEditorOpen}
       />
 
       {/* Full Statistics Modal */}
