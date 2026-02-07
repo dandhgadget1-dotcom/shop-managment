@@ -34,7 +34,6 @@ import {
 } from "lucide-react";
 import { formatPakistanPhone, formatIdNumber, formatCurrency } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useShop } from "@/context/ShopContext";
 import FileUpload from "@/components/ui/file-upload";
 import { cn } from "@/lib/utils";
@@ -1246,23 +1245,28 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
 
                     <div className="space-y-1">
                       <Label htmlFor="numberOfInstallments" className="text-xs">Number of Installments</Label>
-                      <Select
+                      <Input
+                        id="numberOfInstallments"
+                        name="numberOfInstallments"
+                        type="number"
                         value={paymentData.numberOfInstallments}
-                        onValueChange={(value) =>
-                          setPaymentData((prev) => ({ ...prev, numberOfInstallments: value }))
-                        }
-                      >
-                        <SelectTrigger id="numberOfInstallments" className="h-8 text-sm">
-                          <SelectValue placeholder="Select number of installments" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[3, 6, 9, 12, 18, 24].map((num) => (
-                            <SelectItem key={num} value={num.toString()}>
-                              {num} months
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Allow empty string or numbers between 1 and 100
+                          if (value === "" || (parseInt(value) >= 1 && parseInt(value) <= 100)) {
+                            setPaymentData((prev) => ({ ...prev, numberOfInstallments: value }));
+                          }
+                        }}
+                        placeholder="Enter number of months (1-100)"
+                        min="1"
+                        max="100"
+                        step="1"
+                        className="h-8 text-sm"
+                        required={paymentType === "installment"}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter any number of months from 1 to 100
+                      </p>
                     </div>
 
                     <div className="space-y-1">
