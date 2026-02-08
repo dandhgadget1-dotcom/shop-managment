@@ -35,6 +35,7 @@ import {
   Copy,
   Check,
   MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -73,6 +74,8 @@ export default function InstallmentsLedger({ customerId, onClose }) {
   });
   const [allowFlexiblePayment, setAllowFlexiblePayment] = useState(false);
   const [copiedInstallmentNumber, setCopiedInstallmentNumber] = useState(null);
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [isReversingPayment, setIsReversingPayment] = useState(false);
 
   // Smart payment allocation algorithm
   const allocatePayments = useMemo(() => {
@@ -409,8 +412,12 @@ export default function InstallmentsLedger({ customerId, onClose }) {
   };
 
   const confirmReversePayment = async () => {
-    if (!paymentToReverse || !(paymentToReverse._id || paymentToReverse.id)) return;
+    if (!paymentToReverse || !(paymentToReverse._id || paymentToReverse.id)) {
+      toast.error("Payment ID not found. Cannot reverse payment.");
+      return;
+    }
 
+    setIsReversingPayment(true);
     try {
       const currentPayments = payment?.payments || [];
       const paymentId = paymentToReverse._id || paymentToReverse.id;
@@ -443,6 +450,8 @@ export default function InstallmentsLedger({ customerId, onClose }) {
     } catch (error) {
       console.error("Error reversing payment:", error);
       toast.error(error.message || "Failed to reverse payment. Please try again.");
+    } finally {
+      setIsReversingPayment(false);
     }
   };
 
@@ -514,6 +523,7 @@ export default function InstallmentsLedger({ customerId, onClose }) {
       }
     }
 
+    setIsRecordingPayment(true);
     try {
       const paymentRecord = {
         installmentNumber: selectedInstallment?.number || null, // Optional for flexible payments
@@ -583,6 +593,8 @@ export default function InstallmentsLedger({ customerId, onClose }) {
     } catch (error) {
       console.error("Error saving payment:", error);
       toast.error(error.message || "Failed to save payment. Please try again.");
+    } finally {
+      setIsRecordingPayment(false);
     }
   };
 
@@ -1477,12 +1489,22 @@ export default function InstallmentsLedger({ customerId, onClose }) {
                     notes: "",
                   });
                 }}
+                disabled={isRecordingPayment}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isEditingPayment ? "Update Payment" : "Record Payment"}
+              <Button type="submit" disabled={isRecordingPayment}>
+                {isRecordingPayment ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {isEditingPayment ? "Updating..." : "Recording..."}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    {isEditingPayment ? "Update Payment" : "Record Payment"}
+                  </>
+                )}
               </Button>
             </div>
           </form>
@@ -1540,6 +1562,7 @@ export default function InstallmentsLedger({ customerId, onClose }) {
                 setReverseConfirmOpen(false);
                 setPaymentToReverse(null);
               }}
+              disabled={isReversingPayment}
             >
               Cancel
             </Button>
@@ -1547,9 +1570,19 @@ export default function InstallmentsLedger({ customerId, onClose }) {
               type="button"
               variant="destructive"
               onClick={confirmReversePayment}
+              disabled={isReversingPayment}
             >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reverse Payment
+              {isReversingPayment ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Reversing...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reverse Payment
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

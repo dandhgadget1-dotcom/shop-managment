@@ -27,6 +27,7 @@ import {
   Edit,
   RotateCcw,
   MoreVertical,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -63,6 +64,8 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
     amount: "",
     notes: "",
   });
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [isReversingPayment, setIsReversingPayment] = useState(false);
 
   if (!customer) return null;
 
@@ -110,10 +113,19 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
   const confirmReversePayment = async () => {
     if (!paymentToReverse) return;
 
+    setIsReversingPayment(true);
     try {
       const currentPayments = payment?.payments || [];
+      const paymentId = paymentToReverse._id || paymentToReverse.id;
+      
+      if (!paymentId) {
+        toast.error("Payment ID not found. Cannot reverse payment.");
+        setIsReversingPayment(false);
+        return;
+      }
+
       const updatedPayments = currentPayments.filter(p => 
-        (p._id || p.id) !== (paymentToReverse._id || paymentToReverse.id)
+        (p._id || p.id) !== paymentId
       );
 
       const cleanedPayment = {
@@ -132,6 +144,8 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
     } catch (error) {
       console.error("Error reversing payment:", error);
       toast.error(error.message || "Failed to reverse payment. Please try again.");
+    } finally {
+      setIsReversingPayment(false);
     }
   };
 
@@ -183,6 +197,7 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
       }
     }
 
+    setIsRecordingPayment(true);
     try {
       const paymentRecord = {
         paymentDate: paymentFormData.paymentDate,
@@ -237,6 +252,8 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
     } catch (error) {
       console.error("Error saving payment:", error);
       toast.error(error.message || "Failed to save payment. Please try again.");
+    } finally {
+      setIsRecordingPayment(false);
     }
   };
 
@@ -367,7 +384,7 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
                   {allPayments.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No payments recorded yet. Click "Record Payment" to add the first payment.
+                        No payments recorded yet. Click &quot;Record Payment&quot; to add the first payment.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -464,15 +481,26 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => {
-                  setPaymentModalOpen(false);
-                  setIsEditingPayment(false);
-                  setPaymentToReverse(null);
-                }}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setPaymentModalOpen(false);
+                    setIsEditingPayment(false);
+                    setPaymentToReverse(null);
+                  }}
+                  disabled={isRecordingPayment}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handlePaymentSubmit}>
-                  {isEditingPayment ? "Update Payment" : "Record Payment"}
+                <Button onClick={handlePaymentSubmit} disabled={isRecordingPayment}>
+                  {isRecordingPayment ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isEditingPayment ? "Updating..." : "Recording..."}
+                    </>
+                  ) : (
+                    isEditingPayment ? "Update Payment" : "Record Payment"
+                  )}
                 </Button>
               </div>
             </div>
@@ -505,14 +533,32 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => {
-                setReverseConfirmOpen(false);
-                setPaymentToReverse(null);
-              }}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setReverseConfirmOpen(false);
+                  setPaymentToReverse(null);
+                }}
+                disabled={isReversingPayment}
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={confirmReversePayment}>
-                Reverse Payment
+              <Button 
+                variant="destructive" 
+                onClick={confirmReversePayment}
+                disabled={isReversingPayment}
+              >
+                {isReversingPayment ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Reversing...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reverse Payment
+                  </>
+                )}
               </Button>
             </div>
           </DialogContent>
