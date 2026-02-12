@@ -110,23 +110,56 @@ export default function PartialPaymentLedger({ customerId, onClose }) {
     setReverseConfirmOpen(true);
   };
 
+  // Helper function to match payments even without IDs
+  const isPaymentMatch = (payment1, payment2) => {
+    // First try to match by ID if both have IDs
+    const id1 = payment1._id || payment1.id;
+    const id2 = payment2._id || payment2.id;
+    if (id1 && id2 && id1 === id2) {
+      return true;
+    }
+    
+    // If no ID match, match by unique combination of fields
+    const date1 = payment1.paymentDate || payment1.recordedAt;
+    const date2 = payment2.paymentDate || payment2.recordedAt;
+    const amount1 = parseFloat(payment1.amount) || 0;
+    const amount2 = parseFloat(payment2.amount) || 0;
+    const recordedAt1 = payment1.recordedAt;
+    const recordedAt2 = payment2.recordedAt;
+    
+    // Match by date, amount, and recordedAt if available
+    if (date1 && date2 && amount1 === amount2) {
+      const dateMatch = new Date(date1).getTime() === new Date(date2).getTime();
+      if (dateMatch) {
+        // If both have recordedAt, use it for more precise matching
+        if (recordedAt1 && recordedAt2) {
+          return new Date(recordedAt1).getTime() === new Date(recordedAt2).getTime();
+        }
+        // If only one has recordedAt, still match by date and amount
+        // This handles cases where recordedAt might not be set
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   const confirmReversePayment = async () => {
     if (!paymentToReverse) return;
 
     setIsReversingPayment(true);
     try {
       const currentPayments = payment?.payments || [];
-      const paymentId = paymentToReverse._id || paymentToReverse.id;
       
-      if (!paymentId) {
-        toast.error("Payment ID not found. Cannot reverse payment.");
+      // Filter out the matching payment using the helper function
+      const updatedPayments = currentPayments.filter(p => !isPaymentMatch(p, paymentToReverse));
+
+      // Verify that we actually removed a payment
+      if (updatedPayments.length === currentPayments.length) {
+        toast.error("Could not find the payment to reverse. Please try again.");
         setIsReversingPayment(false);
         return;
       }
-
-      const updatedPayments = currentPayments.filter(p => 
-        (p._id || p.id) !== paymentId
-      );
 
       const cleanedPayment = {
         paymentType: payment.paymentType,
