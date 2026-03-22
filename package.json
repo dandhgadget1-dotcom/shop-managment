@@ -25,6 +25,8 @@
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
     "lucide-react": "^0.556.0",
     "mongoose": "^9.1.6",
     "next": "16.0.8",

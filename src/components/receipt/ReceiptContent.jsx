@@ -28,7 +28,21 @@ export default function ReceiptContent({ customer, settings, paymentType, receip
   const currentPaymentType = paymentType || customer.payment?.paymentType || "direct";
 
   return (
-    <div ref={receiptRef} className="receipt-container bg-white text-black" style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", padding: "10px", width: "80mm", maxWidth: "100%", margin: "0 auto" }}>
+    <div
+      ref={receiptRef}
+      className="receipt-container rounded-sm"
+      style={{
+        fontFamily: "'Courier New', monospace",
+        fontSize: "12px",
+        padding: "10px",
+        width: "80mm",
+        maxWidth: "100%",
+        margin: "0 auto",
+        backgroundColor: "#ffffff",
+        color: "#000000",
+        border: "1px dashed #9ca3af",
+      }}
+    >
       {/* Header */}
       <div className="center">
         {settings?.shopName && (
