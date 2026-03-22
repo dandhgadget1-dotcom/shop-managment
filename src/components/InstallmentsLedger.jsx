@@ -36,6 +36,7 @@ import {
   Check,
   MessageCircle,
   Loader2,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -55,6 +56,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Receipt from "@/components/receipt/Receipt";
 
 export default function InstallmentsLedger({ customerId, onClose }) {
   const { getCustomerById, updateCustomer, customers, refreshCustomers } = useShop();
@@ -76,6 +78,8 @@ export default function InstallmentsLedger({ customerId, onClose }) {
   const [copiedInstallmentNumber, setCopiedInstallmentNumber] = useState(null);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   const [isReversingPayment, setIsReversingPayment] = useState(false);
+  const [installmentReceiptOpen, setInstallmentReceiptOpen] = useState(false);
+  const [installmentReceiptPayload, setInstallmentReceiptPayload] = useState(null);
 
   // Smart payment allocation algorithm
   const allocatePayments = useMemo(() => {
@@ -244,6 +248,29 @@ export default function InstallmentsLedger({ customerId, onClose }) {
   const handleReversePayment = (paymentRecord) => {
     setPaymentToReverse(paymentRecord);
     setReverseConfirmOpen(true);
+  };
+
+  const handleInstallmentPaymentReceipt = (installment, paymentRecord) => {
+    const schedule = installments.map((i) => ({
+      number: i.number,
+      dueDate:
+        i.date instanceof Date
+          ? i.date.toISOString()
+          : typeof i.date === "string"
+            ? i.date
+            : new Date(i.date).toISOString(),
+      requiredAmount: i.requiredAmount,
+      paidAmount: i.paidAmount,
+      remainingAmount: i.remainingAmount,
+      status: i.status,
+    }));
+    setInstallmentReceiptPayload({
+      installmentNumber: installment.number,
+      totalInstallments: parseInt(customer.payment?.numberOfInstallments) || 0,
+      paymentRecord,
+      schedule,
+    });
+    setInstallmentReceiptOpen(true);
   };
 
   // Format phone number for WhatsApp (wa.me format: 923001234567, no +)
@@ -649,6 +676,7 @@ export default function InstallmentsLedger({ customerId, onClose }) {
   };
 
   return (
+    <>
     <Dialog open={!!customerId} >
       <DialogContent 
         showCloseButton={false}
@@ -1084,6 +1112,13 @@ export default function InstallmentsLedger({ customerId, onClose }) {
                                           >
                                             <RotateCcw className="h-4 w-4 mr-2" />
                                             Reverse Payment (Rs. {parseFloat(paymentRecord.amount || 0).toFixed(2)})
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleInstallmentPaymentReceipt(installment, paymentRecord)}
+                                            className="cursor-pointer"
+                                          >
+                                            <FileText className="h-4 w-4 mr-2" />
+                                            Receipt (Rs. {parseFloat(paymentRecord.amount || 0).toFixed(2)})
                                           </DropdownMenuItem>
                                         </div>
                                       ))}
@@ -1638,5 +1673,17 @@ export default function InstallmentsLedger({ customerId, onClose }) {
         </DialogContent>
       </Dialog>
     </Dialog>
+
+    <Receipt
+      open={installmentReceiptOpen}
+      onOpenChange={(open) => {
+        setInstallmentReceiptOpen(open);
+        if (!open) setInstallmentReceiptPayload(null);
+      }}
+      customer={customer}
+      paymentType="installment"
+      installmentReceipt={installmentReceiptPayload}
+    />
+    </>
   );
 }

@@ -2,7 +2,13 @@
 
 import { formatCurrency } from "@/lib/utils";
 
-export default function ReceiptContent({ customer, settings, paymentType, receiptRef }) {
+export default function ReceiptContent({
+  customer,
+  settings,
+  paymentType,
+  receiptRef,
+  installmentReceipt,
+}) {
   const formatDate = (dateString) => {
     if (!dateString) return new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
     return new Date(dateString).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -14,6 +20,209 @@ export default function ReceiptContent({ customer, settings, paymentType, receip
   };
 
   if (!customer) return null;
+
+  if (installmentReceipt) {
+    const { installmentNumber, totalInstallments, paymentRecord, schedule = [] } = installmentReceipt;
+    const paidAt = paymentRecord?.paymentDate || paymentRecord?.recordedAt || new Date();
+    const amount = Math.round(parseFloat(paymentRecord?.amount) || 0);
+    const outstandingRows = schedule.filter((row) => Math.round(row.remainingAmount || 0) > 0);
+    const totalRemaining = outstandingRows.reduce(
+      (sum, row) => sum + Math.round(row.remainingAmount || 0),
+      0
+    );
+
+    return (
+      <div
+        ref={receiptRef}
+        className="receipt-container rounded-sm"
+        style={{
+          fontFamily: "'Courier New', monospace",
+          fontSize: "12px",
+          padding: "10px",
+          width: "80mm",
+          maxWidth: "100%",
+          margin: "0 auto",
+          backgroundColor: "#ffffff",
+          color: "#000000",
+          border: "1px dashed #9ca3af",
+        }}
+      >
+        <div className="center">
+          {settings?.shopName && (
+            <div className="shop-name" style={{ fontSize: "16px", fontWeight: "bold", margin: "5px 0", textTransform: "uppercase" }}>
+              {settings.shopName}
+            </div>
+          )}
+          <div className="shop-info" style={{ fontSize: "10px", lineHeight: "1.4", margin: "5px 0" }}>
+            {settings?.shopAddress && <div>{settings.shopAddress}</div>}
+            {settings?.shopPhone && <div>Tel: {settings.shopPhone}</div>}
+            {settings?.shopEmail && <div>{settings.shopEmail}</div>}
+            {settings?.ntnNumber && <div>NTN: {settings.ntnNumber}</div>}
+          </div>
+        </div>
+
+        <div className="divider" style={{ borderTop: "1px dashed #000", margin: "8px 0" }}></div>
+
+        <div className="center receipt-title" style={{ fontSize: "14px", fontWeight: "bold", margin: "10px 0", textTransform: "uppercase" }}>
+          INSTALLMENT PAYMENT RECEIPT
+        </div>
+
+        <div className="divider" style={{ borderTop: "1px dashed #000", margin: "8px 0" }}></div>
+
+        <div className="info-line" style={{ fontSize: "11px", lineHeight: "1.5", margin: "2px 0" }}>
+          Date: {formatDate(paidAt)}
+        </div>
+        <div className="info-line" style={{ fontSize: "11px", lineHeight: "1.5", margin: "2px 0" }}>
+          Time: {formatTime(paidAt)}
+        </div>
+
+        <div className="divider" style={{ borderTop: "1px dashed #000", margin: "8px 0" }}></div>
+
+        <div className="info-line bold" style={{ fontSize: "11px", lineHeight: "1.5", margin: "2px 0", fontWeight: "bold" }}>CUSTOMER:</div>
+        <div className="info-line" style={{ fontSize: "11px", lineHeight: "1.5", margin: "2px 0" }}>{customer.fullName}</div>
+        <div className="info-line" style={{ fontSize: "11px", lineHeight: "1.5", margin: "2px 0" }}>ID: {customer.idNo}</div>
+        <div className="info-line" style={{ fontSize: "11px", lineHeight: "1.5", margin: "2px 0" }}>Tel: {customer.contactInfo}</div>
+        {customer.address && (
+          <div className="info-line" style={{ fontSize: "11px", lineHeight: "1.5", margin: "2px 0" }}>{customer.address}</div>
+        )}
+
+        <div className="divider" style={{ borderTop: "1px dashed #000", margin: "8px 0" }}></div>
+
+        {customer.phone && (
+          <div className="info-line" style={{ fontSize: "10px", lineHeight: "1.5", margin: "4px 0" }}>
+            <span className="bold" style={{ fontWeight: "bold" }}>Reference: </span>
+            {customer.phone.name}
+            {customer.phone.model ? ` (${customer.phone.model})` : ""}
+          </div>
+        )}
+
+        <div className="total-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", margin: "6px 0" }}>
+          <span>Installment:</span>
+          <span className="bold" style={{ fontWeight: "bold" }}>
+            #{installmentNumber}
+            {totalInstallments > 0 ? ` of ${totalInstallments}` : ""}
+          </span>
+        </div>
+
+        <div className="divider-thick" style={{ borderTop: "2px solid #000", margin: "8px 0" }}></div>
+
+        <div className="total-row final" style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", margin: "4px 0", fontWeight: "bold" }}>
+          <span>AMOUNT RECEIVED:</span>
+          <span>{formatCurrency(amount)}</span>
+        </div>
+
+        {paymentRecord?.notes ? (
+          <>
+            <div className="divider" style={{ borderTop: "1px dashed #000", margin: "8px 0" }}></div>
+            <div className="info-line" style={{ fontSize: "10px", lineHeight: "1.5", margin: "2px 0" }}>
+              <span className="bold" style={{ fontWeight: "bold" }}>Notes: </span>
+              {paymentRecord.notes}
+            </div>
+          </>
+        ) : null}
+
+        {schedule.length > 0 ? (
+          <>
+            <div className="divider-thick" style={{ borderTop: "2px solid #000", margin: "8px 0" }}></div>
+            <div
+              className="info-line bold center"
+              style={{
+                fontSize: "11px",
+                fontWeight: "bold",
+                margin: "6px 0 4px",
+                textTransform: "uppercase",
+                textAlign: "center",
+              }}
+            >
+              Outstanding installments
+            </div>
+            {outstandingRows.length > 0 ? (
+              <>
+                {outstandingRows.map((row) => (
+                  <div
+                    key={`out-${row.number}`}
+                    className="info-line"
+                    style={{ fontSize: "10px", lineHeight: "1.45", margin: "3px 0" }}
+                  >
+                    <span className="bold" style={{ fontWeight: "bold" }}>#{row.number}</span>
+                    {" — Due "}
+                    {formatDate(row.dueDate)}
+                    {" — "}
+                    {formatCurrency(Math.round(row.remainingAmount || 0))}
+                    {row.status === "partial" ? " (partial)" : ""}
+                  </div>
+                ))}
+                <div
+                  className="total-row"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "11px",
+                    margin: "6px 0 2px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <span>Total still due:</span>
+                  <span>{formatCurrency(totalRemaining)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="info-line" style={{ fontSize: "10px", lineHeight: "1.5", margin: "2px 0" }}>
+                All installments are paid. No balance on schedule.
+              </div>
+            )}
+
+            <div className="divider" style={{ borderTop: "1px dashed #000", margin: "8px 0" }}></div>
+            <div
+              className="info-line bold center"
+              style={{
+                fontSize: "11px",
+                fontWeight: "bold",
+                margin: "6px 0 4px",
+                textTransform: "uppercase",
+                textAlign: "center",
+              }}
+            >
+              Full schedule (all dates)
+            </div>
+            {schedule.map((row) => {
+              const req = Math.round(row.requiredAmount || 0);
+              const paid = Math.round(row.paidAmount || 0);
+              const rem = Math.round(row.remainingAmount || 0);
+              let statusText = "PAID";
+              if (rem > 0) {
+                statusText =
+                  paid > 0
+                    ? `Paid ${formatCurrency(paid)}, due ${formatCurrency(rem)}`
+                    : `Due ${formatCurrency(rem)}`;
+              }
+              return (
+                <div
+                  key={`all-${row.number}`}
+                  style={{ fontSize: "9px", lineHeight: "1.4", margin: "3px 0" }}
+                >
+                  <span style={{ fontWeight: "bold" }}>#{row.number}</span> {formatDate(row.dueDate)}
+                  <br />
+                  <span style={{ paddingLeft: "8px" }}>
+                    Plan {formatCurrency(req)} — {statusText}
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        ) : null}
+
+        <div className="divider-thick" style={{ borderTop: "2px solid #000", margin: "8px 0" }}></div>
+
+        <div className="footer center" style={{ textAlign: "center", fontSize: "10px", marginTop: "15px", lineHeight: "1.4" }}>
+          <div>{settings?.footerMessage || "Thank you for your business!"}</div>
+          <div style={{ marginTop: "8px", fontSize: "9px" }}>
+            {formatDate(paidAt)} {formatTime(paidAt)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const phonePrice = Math.round(parseFloat(customer.phone?.price) || 0);
   const downPayment = Math.round(parseFloat(customer.payment?.downPayment) || 0);

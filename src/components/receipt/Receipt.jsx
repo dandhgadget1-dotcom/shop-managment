@@ -214,7 +214,7 @@ function ReceiptEditableBody({ initialHtml, innerRef }) {
   );
 }
 
-export default function Receipt({ open, onOpenChange, customer, paymentType }) {
+export default function Receipt({ open, onOpenChange, customer, paymentType, installmentReceipt }) {
   const { settings } = useShopSettings();
   const toast = useToast();
   const receiptRef = useRef(null);
@@ -227,6 +227,10 @@ export default function Receipt({ open, onOpenChange, customer, paymentType }) {
   const customerKey =
     customer?.id ?? customer?._id ?? customer?.idNo ?? customer?.fullName ?? "";
 
+  const installmentReceiptKey = installmentReceipt
+    ? `inst-${installmentReceipt.installmentNumber}-${installmentReceipt.paymentRecord?._id || installmentReceipt.paymentRecord?.id || ""}-${installmentReceipt.paymentRecord?.paymentDate || ""}-${installmentReceipt.paymentRecord?.amount || ""}`
+    : "full";
+
   useEffect(() => {
     if (!open) {
       setEditedHtml(null);
@@ -237,19 +241,22 @@ export default function Receipt({ open, onOpenChange, customer, paymentType }) {
   useEffect(() => {
     setEditedHtml(null);
     setIsEditing(false);
-  }, [customerKey]);
+  }, [customerKey, installmentReceiptKey]);
 
   const openPrintWindow = useCallback(() => {
     if (!customer || !receiptRef.current) return;
 
     const printWindow = window.open("", "_blank");
     const printContent = receiptRef.current.innerHTML;
+    const titleExtra = installmentReceipt
+      ? ` — Installment #${installmentReceipt.installmentNumber}`
+      : "";
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Receipt - ${customer?.fullName || "Customer"}</title>
+          <title>Receipt${titleExtra} - ${customer?.fullName || "Customer"}</title>
           <style>${getReceiptPrintStyles()}</style>
         </head>
         <body>
@@ -262,7 +269,7 @@ export default function Receipt({ open, onOpenChange, customer, paymentType }) {
     setTimeout(() => {
       printWindow.print();
     }, 250);
-  }, [customer]);
+  }, [customer, installmentReceipt]);
 
   const downloadPdf = useCallback(async () => {
     const el = receiptRef.current;
@@ -298,7 +305,10 @@ export default function Receipt({ open, onOpenChange, customer, paymentType }) {
         .replace(/[/\\?%*:|"<>]/g, "")
         .replace(/\s+/g, "-")
         .slice(0, 80) || "customer";
-      pdf.save(`receipt-${safeName}-${Date.now()}.pdf`);
+      const filePrefix = installmentReceipt
+        ? `receipt-inst${installmentReceipt.installmentNumber}-${safeName}`
+        : `receipt-${safeName}`;
+      pdf.save(`${filePrefix}-${Date.now()}.pdf`);
     } catch (e) {
       console.error(e);
       const hint =
@@ -316,7 +326,7 @@ export default function Receipt({ open, onOpenChange, customer, paymentType }) {
       pdfBusyRef.current = false;
       setPdfLoading(false);
     }
-  }, [customer, toast]);
+  }, [customer, installmentReceipt, toast]);
 
   const startEdit = () => {
     const el = receiptRef.current;
@@ -347,7 +357,9 @@ export default function Receipt({ open, onOpenChange, customer, paymentType }) {
       <DialogContent className="max-w-md max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <span className="pt-0.5">Receipt</span>
+            <span className="pt-0.5">
+              {installmentReceipt ? "Installment receipt" : "Receipt"}
+            </span>
             <div className="flex flex-wrap items-center gap-2 pr-8">
               <Button
                 type="button"
@@ -411,6 +423,7 @@ export default function Receipt({ open, onOpenChange, customer, paymentType }) {
             settings={settings}
             paymentType={paymentType}
             receiptRef={receiptRef}
+            installmentReceipt={installmentReceipt}
           />
         )}
       </DialogContent>
