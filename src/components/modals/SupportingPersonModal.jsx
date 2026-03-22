@@ -16,7 +16,7 @@ import { Upload, UserPlus, IdCard, MapPin, Phone, Loader2 } from "lucide-react";
 import { useShop } from "@/context/ShopContext";
 import { uploadAPI } from "@/lib/api";
 import FileUpload from "@/components/ui/file-upload";
-import { formatPakistanPhone, formatIdNumber } from "@/lib/utils";
+import { formatIdNumber } from "@/lib/utils";
 
 export default function SupportingPersonModal({
   open,
@@ -81,9 +81,13 @@ export default function SupportingPersonModal({
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let next = value;
+    if (name === "idNo") {
+      next = formatIdNumber(value);
+    }
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: next,
     }));
   };
 
@@ -343,9 +347,10 @@ export default function SupportingPersonModal({
             <Input
               id="contactInfo"
               name="contactInfo"
+              type="text"
               value={formData.contactInfo}
               onChange={handleInputChange}
-              placeholder="Enter phone number or email"
+              placeholder="Phone number or email"
               required
             />
           </div>

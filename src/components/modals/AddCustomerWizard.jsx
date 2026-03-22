@@ -28,9 +28,8 @@ import {
 } from "lucide-react";
 import { useShop } from "@/context/ShopContext";
 import { uploadAPI } from "@/lib/api";
-import { formatPakistanPhone, formatIdNumber } from "@/lib/utils";
+import { formatIdNumber } from "@/lib/utils";
 import FileUpload from "@/components/ui/file-upload";
-import { uploadAPI } from "@/lib/api";
 
 export default function AddCustomerWizard({ open, onOpenChange }) {
   const { addCustomer } = useShop();
@@ -132,11 +131,6 @@ export default function AddCustomerWizard({ open, onOpenChange }) {
     if (name === "idNo") {
       formattedValue = formatIdNumber(value);
     }
-    // Format phone number
-    else if (name === "contactInfo") {
-      formattedValue = formatPakistanPhone(value);
-    }
-    
     setCustomerData((prev) => ({
       ...prev,
       [name]: formattedValue,
@@ -246,11 +240,7 @@ export default function AddCustomerWizard({ open, onOpenChange }) {
     if (name === "idNo") {
       formattedValue = formatIdNumber(value);
     }
-    // Format phone number
-    else if (name === "contactInfo") {
-      formattedValue = formatPakistanPhone(value);
-    }
-    
+
     setSupportingPersonData((prev) => ({
       ...prev,
       [name]: formattedValue,
@@ -561,10 +551,10 @@ export default function AddCustomerWizard({ open, onOpenChange }) {
                 <Input
                   id="contactInfo"
                   name="contactInfo"
+                  type="text"
                   value={customerData.contactInfo}
                   onChange={handleCustomerInputChange}
-                  placeholder="03XX-XXXXXXX"
-                  maxLength={12}
+                  placeholder="Phone number or email"
                   required
                 />
               </div>
@@ -682,9 +672,10 @@ export default function AddCustomerWizard({ open, onOpenChange }) {
                 <Input
                   id="spContactInfo"
                   name="contactInfo"
+                  type="text"
                   value={supportingPersonData.contactInfo}
                   onChange={handleSupportingPersonInputChange}
-                  placeholder="Enter phone number or email"
+                  placeholder="Phone number or email"
                   required
                 />
               </div>

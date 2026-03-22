@@ -32,7 +32,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { formatPakistanPhone, formatIdNumber, formatCurrency } from "@/lib/utils";
+import { formatIdNumber, formatCurrency } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useShop } from "@/context/ShopContext";
 import FileUpload from "@/components/ui/file-upload";
@@ -293,11 +293,6 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
     if (name === "idNo") {
       formattedValue = formatIdNumber(value);
     }
-    // Format phone number
-    else if (name === "contactInfo") {
-      formattedValue = formatPakistanPhone(value);
-    }
-    
     setCustomerData((prev) => ({
       ...prev,
       [name]: formattedValue,
@@ -386,11 +381,6 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
     if (name === "idNo") {
       formattedValue = formatIdNumber(value);
     }
-    // Format phone number
-    else if (name === "contactInfo") {
-      formattedValue = formatPakistanPhone(value);
-    }
-    
     setSupportingPersonData((prev) => ({
       ...prev,
       [name]: formattedValue,
@@ -805,10 +795,10 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
                 <Input
                   id="contactInfo"
                   name="contactInfo"
+                  type="text"
                   value={customerData.contactInfo}
                   onChange={handleCustomerInputChange}
-                  placeholder="03XX-XXXXXXX"
-                  maxLength={12}
+                  placeholder="Phone number or email"
                   className="h-8 text-sm"
                   required
                 />
@@ -930,9 +920,10 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
                 <Input
                   id="spContactInfo"
                   name="contactInfo"
+                  type="text"
                   value={supportingPersonData.contactInfo}
                   onChange={handleSupportingPersonInputChange}
-                  placeholder="Enter phone number or email"
+                  placeholder="Phone number or email"
                   className="h-8 text-sm"
                 />
               </div>
@@ -993,7 +984,7 @@ export default function CustomerCompleteForm({ open, onOpenChange, customerId = 
           </div>
 
           {/* Phone Details Section */}
-          <div className="border rounded-md overflow-hidden">
+          <div className="border rounded-md overflow-visible">
             <button
               type="button"
               onClick={() => toggleSection("phone")}

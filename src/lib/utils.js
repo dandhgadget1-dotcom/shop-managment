@@ -6,35 +6,19 @@ export function cn(...inputs) {
 }
 
 /**
- * Format Pakistan phone number
- * Accepts formats: 03XX-XXXXXXX, 03XXXXXXXXX, +92-3XX-XXXXXXX, +923XXXXXXXXX
- * Output format: 03XX-XXXXXXX
+ * Digits for https://wa.me/{digits} (no +). Pakistan mobile patterns plus 10–15 digit numbers with country code.
  */
-export function formatPakistanPhone(value) {
-  // Remove all non-digit characters except +
-  let cleaned = value.replace(/[^\d+]/g, '');
-  
-  // Remove country code if present
-  if (cleaned.startsWith('+92')) {
-    cleaned = cleaned.substring(3);
-  } else if (cleaned.startsWith('92') && cleaned.length > 10) {
-    cleaned = cleaned.substring(2);
-  }
-  
-  // Remove leading 0 if present and add it back
-  if (cleaned.startsWith('0')) {
-    cleaned = cleaned.substring(1);
-  }
-  
-  // Limit to 10 digits (03XX-XXXXXXX)
-  cleaned = cleaned.substring(0, 10);
-  
-  // Format: 03XX-XXXXXXX
-  if (cleaned.length <= 4) {
-    return cleaned.length > 0 ? `0${cleaned}` : '';
-  } else {
-    return `0${cleaned.substring(0, 3)}-${cleaned.substring(3)}`;
-  }
+export function digitsForWhatsApp(phoneNumber) {
+  if (!phoneNumber || String(phoneNumber).includes("@")) return null;
+  const cleaned = String(phoneNumber).replace(/\D/g, "");
+
+  if (cleaned.length === 12 && cleaned.startsWith("92")) return cleaned;
+  if (cleaned.length === 11 && cleaned.startsWith("0")) return `92${cleaned.slice(1)}`;
+  if (cleaned.length === 10 && /^3\d{9}$/.test(cleaned)) return `92${cleaned}`;
+
+  if (cleaned.length >= 10 && cleaned.length <= 15) return cleaned;
+
+  return null;
 }
 
 /**

@@ -16,7 +16,7 @@ import { Upload, User, IdCard, MapPin, Phone as PhoneIcon, Loader2 } from "lucid
 import { useShop } from "@/context/ShopContext";
 import { uploadAPI } from "@/lib/api";
 import FileUpload from "@/components/ui/file-upload";
-import { formatPakistanPhone, formatIdNumber } from "@/lib/utils";
+import { formatIdNumber } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 
 export default function CustomerModal({ open, onOpenChange, customerId = null }) {
@@ -87,11 +87,6 @@ export default function CustomerModal({ open, onOpenChange, customerId = null })
     if (name === "idNo") {
       formattedValue = formatIdNumber(value);
     }
-    // Format phone number
-    else if (name === "contactInfo") {
-      formattedValue = formatPakistanPhone(value);
-    }
-    
     setFormData((prev) => ({
       ...prev,
       [name]: formattedValue,
@@ -318,9 +313,10 @@ export default function CustomerModal({ open, onOpenChange, customerId = null })
             <Input
               id="contactInfo"
               name="contactInfo"
+              type="text"
               value={formData.contactInfo}
               onChange={handleInputChange}
-              placeholder="Enter phone number or email"
+              placeholder="Phone number or email"
               required
             />
           </div>

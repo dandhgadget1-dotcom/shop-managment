@@ -14,6 +14,7 @@ import { useShop } from "@/context/ShopContext";
 import { useShopSettings } from "@/context/ShopSettingsContext";
 import { useToast } from "@/components/ui/toast";
 import { generateReminderMessage } from "@/lib/reminderMessages";
+import { digitsForWhatsApp } from "@/lib/utils";
 import {
   Calendar,
   DollarSign,
@@ -273,36 +274,6 @@ export default function InstallmentsLedger({ customerId, onClose }) {
     setInstallmentReceiptOpen(true);
   };
 
-  // Format phone number for WhatsApp (wa.me format: 923001234567, no +)
-  const formatPhoneForWhatsApp = (phoneNumber) => {
-    if (!phoneNumber) return null;
-    
-    // Remove all non-digit characters
-    let cleaned = phoneNumber.replace(/[^\d]/g, '');
-    
-    // If it starts with +92, remove the +
-    if (cleaned.startsWith('92') && cleaned.length === 12) {
-      return cleaned;
-    }
-    
-    // If it starts with 0, replace with 92
-    if (cleaned.startsWith('0') && cleaned.length === 11) {
-      return '92' + cleaned.substring(1);
-    }
-    
-    // If it's 10 digits, add 92
-    if (cleaned.length === 10) {
-      return '92' + cleaned;
-    }
-    
-    // If it's already 12 digits starting with 92, return as is
-    if (cleaned.length === 12 && cleaned.startsWith('92')) {
-      return cleaned;
-    }
-    
-    return null;
-  };
-
   const getReminderMessage = (installment) => {
     if (!customer || !customer.contactInfo) {
       return null;
@@ -384,7 +355,7 @@ export default function InstallmentsLedger({ customerId, onClose }) {
       return;
     }
 
-    const phoneNumber = formatPhoneForWhatsApp(customer.contactInfo);
+    const phoneNumber = digitsForWhatsApp(customer.contactInfo);
     
     if (!phoneNumber) {
       toast.error("Invalid phone number format");
